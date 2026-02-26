@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockMate — Inventory Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --surface: #151820;
+    --surface2: #1c2030;
+    --border: #252a38;
+    --accent: #f5a623;
+    --accent2: #4ecca3;
+    --danger: #ff4757;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --success: #2ecc71;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ─── Login ─── */
+  #loginPage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+  #loginPage::before {
+    content: '';
+    position: absolute;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(245,166,35,.12) 0%, transparent 70%);
+    top: -100px; right: -100px;
+    animation: pulse 4s ease-in-out infinite;
+  }
+  #loginPage::after {
+    content: '';
+    position: absolute;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(78,204,163,.08) 0%, transparent 70%);
+    bottom: -80px; left: -80px;
+    animation: pulse 5s ease-in-out infinite reverse;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:.7} }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px 40px;
+    width: 420px;
+    position: relative;
+    z-index: 1;
+    animation: slideUp .5s ease;
+  }
+  @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  .login-logo { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--accent); letter-spacing: -1px; margin-bottom: 6px; }
+  .login-logo span { color: var(--accent2); }
+  .login-sub { color: var(--muted); font-size: 13px; margin-bottom: 36px; font-family: 'IBM Plex Mono', monospace; }
+  .form-group { margin-bottom: 20px; }
+  label { display: block; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-family: 'IBM Plex Mono', monospace; }
+  input[type=text], input[type=password], input[type=number], select, textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 16px; color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px;
+    transition: border-color .2s, box-shadow .2s; outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,166,35,.1); }
+  select option { background: var(--surface2); }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: 'IBM Plex Mono', monospace; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px; transition: all .2s; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #ffc04d; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(245,166,35,.3); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: rgba(255,71,87,.15); color: var(--danger); border: 1px solid rgba(255,71,87,.3); }
+  .btn-danger:hover { background: rgba(255,71,87,.25); }
+  .btn-success { background: rgba(78,204,163,.15); color: var(--accent2); border: 1px solid rgba(78,204,163,.3); }
+  .btn-success:hover { background: rgba(78,204,163,.25); }
+  .btn-full { width: 100%; justify-content: center; }
+  .error-msg { background: rgba(255,71,87,.1); border: 1px solid rgba(255,71,87,.3); color: var(--danger); padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; }
+
+  /* ─── App Layout ─── */
+  #appPage { display: none; min-height: 100vh; flex-direction: column; }
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-logo { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--accent); }
+  .topbar-logo span { color: var(--accent2); }
+  .topbar-nav { display: flex; gap: 4px; }
+  .nav-btn {
+    padding: 8px 18px; border-radius: 8px; border: none; background: transparent;
+    color: var(--muted); cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px;
+    transition: all .2s; position: relative;
+  }
+  .nav-btn:hover { color: var(--text); background: var(--surface2); }
+  .nav-btn.active { color: var(--accent); background: rgba(245,166,35,.1); }
+  .nav-btn .badge {
+    position: absolute; top: 4px; right: 4px;
+    background: var(--accent); color: #000; font-size: 10px; font-weight: 700;
+    width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .user-pill { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 13px; }
+  .user-pill .dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; }
+  .main-content { flex: 1; padding: 32px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+  /* ─── Pages ─── */
+  .page { display: none; animation: fadeIn .3s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .page-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+  .page-title span { color: var(--accent); }
+
+  /* ─── Stats ─── */
+  .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; transition: border-color .2s; position: relative; overflow: hidden;
+  }
+  .stat-card::after { content:''; position:absolute; top:0;right:0;width:3px;height:100%; border-radius:0 12px 12px 0; }
+  .stat-card.c1::after{background:var(--accent);}
+  .stat-card.c2::after{background:var(--accent2);}
+  .stat-card.c3::after{background:#a78bfa;}
+  .stat-card.c4::after{background:var(--danger);}
+  .stat-card:hover { border-color: var(--accent); }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'IBM Plex Mono', monospace; margin-bottom: 8px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; }
+  .stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* ─── Table / Products ─── */
+  .toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .search-box { flex: 1; min-width: 200px; position: relative; }
+  .search-box input { padding-left: 40px; }
+  .search-box .ico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 16px; }
+  .filter-select { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text); font-size: 13px; cursor: pointer; outline: none; }
+  .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 16px; }
+  .product-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; transition: all .2s; cursor: default; position: relative; overflow: hidden;
+  }
+  .product-card:hover { border-color: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+  .product-card .cat-tag {
+    display: inline-block; font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+    padding: 3px 8px; border-radius: 4px; margin-bottom: 12px; font-weight: 500;
+  }
+  .product-card .p-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .product-card .p-desc { font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  .product-card .p-footer { display: flex; justify-content: space-between; align-items: center; }
+  .product-card .p-price { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500; color: var(--accent); }
+  .stock-badge {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace; padding: 4px 10px; border-radius: 20px;
+  }
+  .stock-badge.in { background: rgba(46,204,113,.1); color: var(--success); border: 1px solid rgba(46,204,113,.2); }
+  .stock-badge.low { background: rgba(245,166,35,.1); color: var(--accent); border: 1px solid rgba(245,166,35,.2); }
+  .stock-badge.out { background: rgba(255,71,87,.1); color: var(--danger); border: 1px solid rgba(255,71,87,.2); }
+  .product-card .card-actions { display: flex; gap: 8px; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .btn-icon { padding: 8px 14px; font-size: 12px; border-radius: 6px; }
+
+  /* ─── Table view ─── */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  td { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 13px; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+  /* ─── Modal ─── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 36px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+    transform: scale(.95); transition: transform .2s;
+  }
+  .modal-overlay.open .modal { transform: scale(1); }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 24px; }
+  .modal-footer { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* ─── Cart ─── */
+  .cart-layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
+  .cart-items { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .cart-item { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .cart-item:last-child { border-bottom: none; }
+  .cart-item-info { flex: 1; }
+  .cart-item-name { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
+  .cart-item-meta { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+  .qty-control { display: flex; align-items: center; gap: 10px; }
+  .qty-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+  .qty-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .qty-val { font-family: 'IBM Plex Mono', monospace; font-size: 14px; min-width: 24px; text-align: center; }
+  .cart-item-price { font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: var(--accent); min-width: 80px; text-align: right; }
+  .cart-empty { padding: 60px; text-align: center; color: var(--muted); }
+  .cart-empty .ico-big { font-size: 48px; margin-bottom: 12px; }
+  .cart-summary { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; height: fit-content; }
+  .summary-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+  .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px; }
+  .summary-row.total { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+
+  /* ─── Toast ─── */
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 20px; font-size: 13px; max-width: 320px; display: flex; align-items: center; gap: 10px;
+    animation: slideInRight .3s ease; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  @keyframes slideInRight { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+  .toast.success { border-color: rgba(46,204,113,.4); }
+  .toast.error { border-color: rgba(255,71,87,.4); }
+  .toast.info { border-color: rgba(245,166,35,.4); }
+  .toast .t-ico { font-size: 18px; }
+
+  /* ─── Low stock alerts ─── */
+  .alert-card {
+    display: flex; align-items: center; gap: 16px; padding: 16px 20px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px;
+  }
+  .alert-card .a-ico { font-size: 24px; }
+  .alert-card .a-name { font-weight: 600; font-size: 14px; }
+  .alert-card .a-meta { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+
+  /* Category colors */
+  .cat-electronics { background: rgba(99,179,237,.15); color: #63b3ed; }
+  .cat-clothing { background: rgba(167,139,250,.15); color: #a78bfa; }
+  .cat-food { background: rgba(246,173,85,.15); color: #f6ad55; }
+  .cat-tools { background: rgba(72,187,120,.15); color: #48bb78; }
+  .cat-other { background: rgba(107,114,128,.15); color: #9ca3af; }
+
+  @media(max-width:768px) {
+    .stats-grid { grid-template-columns: repeat(2,1fr); }
+    .cart-layout { grid-template-columns: 1fr; }
+    .topbar { padding: 0 16px; }
+    .main-content { padding: 16px; }
+    .two-col { grid-template-columns: 1fr; }
+    .topbar-nav { gap: 0; }
+    .nav-btn { padding: 8px 12px; font-size: 12px; }
+    .products-grid { grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ Login Page ═══ -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">Stock<span>Mate</span></div>
+    <div class="login-sub">// inventory management system v2.4</div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="Enter username" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Enter password">
+      <div class="hint">Demo — admin/admin123 &nbsp;|&nbsp; staff/staff123</div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In →</button>
+    <div class="error-msg" id="loginError">Invalid credentials. Please try again.</div>
+  </div>
+</div>
+
+<!-- ═══ App Page ═══ -->
+<div id="appPage" style="display:none;flex-direction:column;">
+  <nav class="topbar">
+    <div class="topbar-logo">Stock<span>Mate</span></div>
+    <div class="topbar-nav">
+      <button class="nav-btn active" onclick="showPage('dashboard',this)">📊 Dashboard</button>
+      <button class="nav-btn" onclick="showPage('products',this)">📦 Products</button>
+      <button class="nav-btn" onclick="showPage('cart',this)">
+        🛒 Cart
+        <span class="badge" id="cartBadge" style="display:none">0</span>
+      </button>
+      <button class="nav-btn" id="adminNav" onclick="showPage('manage',this)">⚙️ Manage</button>
+    </div>
+    <div class="topbar-right">
+      <div class="user-pill">
+        <span class="dot"></span>
+        <span id="userLabel">staff</span>
+      </div>
+      <button class="btn btn-secondary" style="padding:8px 16px;font-size:13px" onclick="doLogout()">Logout</button>
+    </div>
+  </nav>
+  <div class="main-content">
+
+    <!-- Dashboard -->
+    <div class="page active" id="pg-dashboard">
+      <div class="page-header">
+        <div class="page-title">Dashboard <span>Overview</span></div>
+        <div style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace" id="dashDate"></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card c1">
+          <div class="stat-label">Total Products</div>
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-sub">SKUs in catalog</div>
+        </div>
+        <div class="stat-card c2">
+          <div class="stat-label">In Stock</div>
+          <div class="stat-value" id="statIn">0</div>
+          <div class="stat-sub">Products available</div>
+        </div>
+        <div class="stat-card c3">
+          <div class="stat-label">Low Stock</div>
+          <div class="stat-value" id="statLow">0</div>
+          <div class="stat-sub">Below threshold (10)</div>
+        </div>
+        <div class="stat-card c4">
+          <div class="stat-label">Out of Stock</div>
+          <div class="stat-value" id="statOut">0</div>
+          <div class="stat-sub">Needs restocking</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px" class="dash-lower">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:16px">⚠️ Low Stock Alerts</div>
+          <div id="alertsList"></div>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:16px">📋 Recent Activity</div>
+          <div id="activityList" class="table-wrap" style="max-height:300px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products -->
+    <div class="page" id="pg-products">
+      <div class="page-header">
+        <div class="page-title">Products <span>Catalog</span></div>
+        <div style="display:flex;gap:8px" id="viewToggle">
+          <button class="btn btn-secondary btn-icon" onclick="setView('grid')" id="vGrid" style="padding:8px 12px">⊞ Grid</button>
+          <button class="btn btn-secondary btn-icon" onclick="setView('table')" id="vTable" style="padding:8px 12px">☰ Table</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="ico">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search products..." oninput="renderProducts()">
+        </div>
+        <select class="filter-select" id="catFilter" onchange="renderProducts()">
+          <option value="">All Categories</option>
+          <option value="Electronics">Electronics</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Food">Food</option>
+          <option value="Tools">Tools</option>
+          <option value="Other">Other</option>
+        </select>
+        <select class="filter-select" id="stockFilter" onchange="renderProducts()">
+          <option value="">All Stock</option>
+          <option value="in">In Stock</option>
+          <option value="low">Low Stock</option>
+          <option value="out">Out of Stock</option>
+        </select>
+      </div>
+      <div id="productView"></div>
+    </div>
+
+    <!-- Cart -->
+    <div class="page" id="pg-cart">
+      <div class="page-header">
+        <div class="page-title">Shopping <span>Cart</span></div>
+        <button class="btn btn-danger" onclick="clearCart()" id="clearCartBtn">🗑️ Clear Cart</button>
+      </div>
+      <div class="cart-layout">
+        <div>
+          <div class="cart-items" id="cartItems"></div>
+        </div>
+        <div class="cart-summary">
+          <div class="summary-title">Order Summary</div>
+          <div class="summary-row"><span style="color:var(--muted)">Items</span><span id="sumItems">0</span></div>
+          <div class="summary-row"><span style="color:var(--muted)">Subtotal</span><span id="sumSubtotal" style="font-family:'IBM Plex Mono',monospace">₹0.00</span></div>
+          <div class="summary-row"><span style="color:var(--muted)">Tax (5%)</span><span id="sumTax" style="font-family:'IBM Plex Mono',monospace">₹0.00</span></div>
+          <div class="summary-row total"><span>Total</span><span id="sumTotal" style="color:var(--accent);font-family:'IBM Plex Mono',monospace">₹0.00</span></div>
+          <button class="btn btn-primary btn-full" style="margin-top:20px" onclick="checkout()">✅ Checkout & Update Stock</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage (Admin) -->
+    <div class="page" id="pg-manage">
+      <div class="page-header">
+        <div class="page-title">Manage <span>Products</span></div>
+        <button class="btn btn-primary" onclick="openAddModal()">+ Add Product</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Product</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Stock</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="manageTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ Add/Edit Product Modal ═══ -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Add New Product</div>
+    <input type="hidden" id="editId">
+    <div class="two-col">
+      <div class="form-group">
+        <label>Product Name</label>
+        <input type="text" id="pName" placeholder="e.g. Wireless Headphones">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="pCategory">
+          <option value="Electronics">Electronics</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Food">Food</option>
+          <option value="Tools">Tools</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="pDesc" rows="2" placeholder="Brief product description..." style="resize:vertical"></textarea>
+    </div>
+    <div class="two-col">
+      <div class="form-group">
+        <label>Price (₹)</label>
+        <input type="number" id="pPrice" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Stock Quantity</label>
+        <input type="number" id="pStock" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>SKU / Product Code</label>
+      <input type="text" id="pSku" placeholder="e.g. ELEC-001">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Confirm Modal ═══ -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">⚠️ Confirm Action</div>
+    <div id="confirmMsg" style="color:var(--muted);font-size:14px;margin-bottom:8px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="confirmBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ═══ Data ═══
+const USERS = {
+  admin: { pass: 'admin123', role: 'admin', name: 'Admin User' },
+  staff: { pass: 'staff123', role: 'staff', name: 'Staff Member' }
+};
+
+let currentUser = null;
+let viewMode = 'grid';
+let cart = {};
+let activity = [];
+let nextId = 10;
+
+let products = [
+  { id:1, name:'Wireless Headphones', category:'Electronics', price:2499, stock:25, sku:'ELEC-001', desc:'Premium noise-cancelling over-ear headphones with 30hr battery.' },
+  { id:2, name:'USB-C Hub 7-in-1', category:'Electronics', price:1299, stock:8, sku:'ELEC-002', desc:'Multi-port hub with HDMI, USB 3.0, and SD card reader.' },
+  { id:3, name:'Mechanical Keyboard', category:'Electronics', price:3499, stock:0, sku:'ELEC-003', desc:'Compact TKL layout with tactile Cherry MX switches.' },
+  { id:4, name:'Cotton T-Shirt (M)', category:'Clothing', price:399, stock:50, sku:'CLO-001', desc:'100% organic cotton round neck t-shirt, machine washable.' },
+  { id:5, name:'Denim Jeans (32)', category:'Clothing', price:1599, stock:5, sku:'CLO-002', desc:'Slim-fit stretch denim jeans in indigo wash.' },
+  { id:6, name:'Protein Powder 1kg', category:'Food', price:1899, stock:15, sku:'FOOD-001', desc:'Whey protein isolate, chocolate flavor, 25g protein/serving.' },
+  { id:7, name:'Mixed Nuts 500g', category:'Food', price:649, stock:30, sku:'FOOD-002', desc:'Premium mix of cashews, almonds, walnuts, and pistachios.' },
+  { id:8, name:'Screwdriver Set 12pc', category:'Tools', price:799, stock:9, sku:'TOOL-001', desc:'Magnetic tip precision screwdriver set with carrying case.' },
+  { id:9, name:'Drill Machine 750W', category:'Tools', price:4299, stock:0, sku:'TOOL-002', desc:'Variable speed electric drill with 13mm chuck capacity.' },
+];
+
+// ═══ Auth ═══
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginError');
+  if (USERS[u] && USERS[u].pass === p) {
+    currentUser = { ...USERS[u], username: u };
+    err.style.display = 'none';
+    document.getElementById('loginPage').style.display = 'none';
+    const app = document.getElementById('appPage');
+    app.style.display = 'flex';
+    document.getElementById('userLabel').textContent = currentUser.name;
+    document.getElementById('adminNav').style.display = currentUser.role === 'admin' ? 'block' : 'none';
+    document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    refreshDashboard();
+    renderProducts();
+    renderManage();
+    renderCart();
+    toast('Welcome back, ' + currentUser.name + '!', 'success');
+  } else {
+    err.style.display = 'block';
+    err.style.animation = 'none'; err.offsetHeight; err.style.animation = '';
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('loginPage').style.display !== 'none') doLogin();
+  }
+});
+
+function doLogout() {
+  currentUser = null;
+  cart = {};
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('appPage').style.display = 'none';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+// ═══ Navigation ═══
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pg-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'dashboard') refreshDashboard();
+  if (id === 'products') renderProducts();
+  if (id === 'cart') renderCart();
+  if (id === 'manage') renderManage();
+}
+
+// ═══ Dashboard ═══
+function refreshDashboard() {
+  const total = products.length;
+  const inStock = products.filter(p => p.stock > 10).length;
+  const low = products.filter(p => p.stock > 0 && p.stock <= 10).length;
+  const out = products.filter(p => p.stock === 0).length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statIn').textContent = inStock;
+  document.getElementById('statLow').textContent = low;
+  document.getElementById('statOut').textContent = out;
+
+  const al = document.getElementById('alertsList');
+  const alerts = products.filter(p => p.stock <= 10);
+  if (alerts.length === 0) {
+    al.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px 0">✅ All products are well stocked.</div>';
+  } else {
+    al.innerHTML = alerts.map(p => `
+      <div class="alert-card">
+        <div class="a-ico">${p.stock === 0 ? '🔴' : '🟡'}</div>
+        <div style="flex:1">
+          <div class="a-name">${p.name}</div>
+          <div class="a-meta">SKU: ${p.sku} &nbsp;|&nbsp; Stock: ${p.stock} units</div>
+        </div>
+        <span class="stock-badge ${p.stock === 0 ? 'out' : 'low'}">${p.stock === 0 ? 'OUT' : 'LOW'}</span>
+      </div>
+    `).join('');
+  }
+
+  const actEl = document.getElementById('activityList');
+  if (activity.length === 0) {
+    actEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">No recent activity.</div>';
+  } else {
+    actEl.innerHTML = '<table><thead><tr><th>Action</th><th>Product</th><th>By</th><th>Time</th></tr></thead><tbody>' +
+      activity.slice().reverse().slice(0,10).map(a => `
+        <tr>
+          <td><span style="font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(78,204,163,.1);color:var(--accent2)">${a.action}</span></td>
+          <td style="font-size:12px">${a.product}</td>
+          <td style="font-size:12px;color:var(--muted)">${a.user}</td>
+          <td style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace">${a.time}</td>
+        </tr>
+      `).join('') + '</tbody></table>';
+  }
+}
+
+function logActivity(action, product) {
+  activity.push({ action, product, user: currentUser.username, time: new Date().toLocaleTimeString('en-IN') });
+}
+
+// ═══ Products ═══
+function getCatClass(cat) {
+  const m = { Electronics:'cat-electronics', Clothing:'cat-clothing', Food:'cat-food', Tools:'cat-tools', Other:'cat-other' };
+  return m[cat] || 'cat-other';
+}
+function stockBadge(s) {
+  if (s === 0) return `<span class="stock-badge out">● Out</span>`;
+  if (s <= 10) return `<span class="stock-badge low">● Low (${s})</span>`;
+  return `<span class="stock-badge in">● In Stock (${s})</span>`;
+}
+function getFiltered() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  const sf = document.getElementById('stockFilter').value;
+  return products.filter(p => {
+    if (q && !p.name.toLowerCase().includes(q) && !p.sku.toLowerCase().includes(q)) return false;
+    if (cat && p.category !== cat) return false;
+    if (sf === 'in' && p.stock <= 10) return false;
+    if (sf === 'low' && !(p.stock > 0 && p.stock <= 10)) return false;
+    if (sf === 'out' && p.stock !== 0) return false;
+    return true;
+  });
+}
+function setView(v) {
+  viewMode = v;
+  document.getElementById('vGrid').style.background = v === 'grid' ? 'rgba(245,166,35,.15)' : '';
+  document.getElementById('vGrid').style.color = v === 'grid' ? 'var(--accent)' : '';
+  document.getElementById('vTable').style.background = v === 'table' ? 'rgba(245,166,35,.15)' : '';
+  document.getElementById('vTable').style.color = v === 'table' ? 'var(--accent)' : '';
+  renderProducts();
+}
+function renderProducts() {
+  const fp = getFiltered();
+  const el = document.getElementById('productView');
+  if (viewMode === 'grid') {
+    if (fp.length === 0) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:60px">No products found.</div>'; return; }
+    el.innerHTML = `<div class="products-grid">${fp.map(p => `
+      <div class="product-card">
+        <span class="cat-tag ${getCatClass(p.category)}">${p.category}</span>
+        <div class="p-name">${p.name}</div>
+        <div class="p-desc">${p.desc}</div>
+        <div class="p-footer">
+          <div class="p-price">₹${p.price.toLocaleString('en-IN')}</div>
+          ${stockBadge(p.stock)}
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-success btn-icon" style="flex:1" onclick="addToCart(${p.id})" ${p.stock === 0 ? 'disabled style="opacity:.4;cursor:not-allowed"' : ''}>
+            🛒 Add to Cart
+          </button>
+        </div>
+      </div>
+    `).join('')}</div>`;
+  } else {
+    el.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>SKU</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Action</th></tr></thead>
+      <tbody>${fp.map(p => `
+        <tr>
+          <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted)">${p.sku}</td>
+          <td><div style="font-weight:600;font-size:13px">${p.name}</div><div style="font-size:11px;color:var(--muted)">${p.desc.substring(0,50)}...</div></td>
+          <td><span class="cat-tag ${getCatClass(p.category)}">${p.category}</span></td>
+          <td style="font-family:'IBM Plex Mono',monospace">₹${p.price.toLocaleString('en-IN')}</td>
+          <td>${stockBadge(p.stock)}</td>
+          <td><button class="btn btn-success btn-icon" onclick="addToCart(${p.id})" ${p.stock === 0 ? 'disabled style="opacity:.4"' : ''}>+ Cart</button></td>
+        </tr>
+      `).join('')}</tbody>
+    </table></div>`;
+  }
+}
+
+// ═══ Cart ═══
+function addToCart(id) {
+  const p = products.find(x => x.id === id);
+  if (!p || p.stock === 0) return;
+  const inCart = cart[id] ? cart[id].qty : 0;
+  if (inCart >= p.stock) { toast('No more stock available!', 'error'); return; }
+  if (!cart[id]) cart[id] = { ...p, qty: 0 };
+  cart[id].qty++;
+  updateCartBadge();
+  renderProducts();
+  toast(`${p.name} added to cart`, 'success');
+}
+
+function removeFromCart(id) {
+  delete cart[id];
+  updateCartBadge();
+  renderCart();
+  renderProducts();
+}
+
+function changeQty(id, delta) {
+  const p = products.find(x => x.id === id);
+  if (!cart[id]) return;
+  cart[id].qty += delta;
+  if (cart[id].qty <= 0) { delete cart[id]; }
+  else if (cart[id].qty > p.stock) { cart[id].qty = p.stock; toast('Max available stock reached', 'info'); }
+  updateCartBadge();
+  renderCart();
+}
+
+function updateCartBadge() {
+  const total = Object.values(cart).reduce((s, i) => s + i.qty, 0);
+  const badge = document.getElementById('cartBadge');
+  badge.textContent = total;
+  badge.style.display = total > 0 ? 'flex' : 'none';
+}
+
+function renderCart() {
+  const items = Object.values(cart);
+  const el = document.getElementById('cartItems');
+  if (items.length === 0) {
+    el.innerHTML = `<div class="cart-empty"><div class="ico-big">🛒</div><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:6px">Cart is empty</div><div style="color:var(--muted);font-size:13px">Add products from the Products page</div></div>`;
+  } else {
+    el.innerHTML = items.map(item => `
+      <div class="cart-item">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.name}</div>
+          <div class="cart-item-meta">${item.sku} &nbsp;|&nbsp; ₹${item.price.toLocaleString('en-IN')} each</div>
+        </div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button>
+          <span class="qty-val">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty(${item.id},1)">+</button>
+        </div>
+        <div class="cart-item-price">₹${(item.price * item.qty).toLocaleString('en-IN')}</div>
+        <button class="btn btn-danger btn-icon" onclick="removeFromCart(${item.id})" style="padding:6px 10px">🗑</button>
+      </div>
+    `).join('');
+  }
+  const sub = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const tax = sub * 0.05;
+  document.getElementById('sumItems').textContent = items.reduce((s, i) => s + i.qty, 0);
+  document.getElementById('sumSubtotal').textContent = '₹' + sub.toLocaleString('en-IN', {minimumFractionDigits:2});
+  document.getElementById('sumTax').textContent = '₹' + tax.toLocaleString('en-IN', {minimumFractionDigits:2});
+  document.getElementById('sumTotal').textContent = '₹' + (sub + tax).toLocaleString('en-IN', {minimumFractionDigits:2});
+  document.getElementById('clearCartBtn').style.display = items.length > 0 ? 'block' : 'none';
+}
+
+function clearCart() {
+  showConfirm('Clear all items from the cart?', () => {
+    cart = {};
+    updateCartBadge();
+    renderCart();
+    renderProducts();
+    toast('Cart cleared', 'info');
+  });
+}
+
+function checkout() {
+  const items = Object.values(cart);
+  if (items.length === 0) { toast('Cart is empty!', 'error'); return; }
+  showConfirm(`Process order for ${items.length} item(s) and update stock?`, () => {
+    items.forEach(item => {
+      const p = products.find(x => x.id === item.id);
+      if (p) {
+        p.stock -= item.qty;
+        logActivity('SOLD', `${p.name} x${item.qty}`);
+      }
+    });
+    cart = {};
+    updateCartBadge();
+    renderCart();
+    renderProducts();
+    renderManage();
+    refreshDashboard();
+    toast('✅ Order placed! Stock updated successfully.', 'success');
+  });
+}
+
+// ═══ Manage ═══
+function renderManage() {
+  if (!document.getElementById('manageTable')) return;
+  document.getElementById('manageTable').innerHTML = products.map(p => `
+    <tr>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted)">#${p.id}</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">${p.name}</div>
+        <div style="font-size:11px;color:var(--muted)">${p.sku}</div>
+      </td>
+      <td><span class="cat-tag ${getCatClass(p.category)}">${p.category}</span></td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:13px">₹${p.price.toLocaleString('en-IN')}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button onclick="updateStock(${p.id},-1)" class="qty-btn">−</button>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;min-width:28px;text-align:center">${p.stock}</span>
+          <button onclick="updateStock(${p.id},1)" class="qty-btn">+</button>
+        </div>
+      </td>
+      <td>${stockBadge(p.stock)}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-secondary btn-icon" onclick="openEditModal(${p.id})" style="padding:6px 12px;font-size:12px">✏️ Edit</button>
+          <button class="btn btn-danger btn-icon" onclick="deleteProduct(${p.id})" style="padding:6px 10px;font-size:12px">🗑</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function updateStock(id, delta) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  p.stock = Math.max(0, p.stock + delta);
+  renderManage();
+  refreshDashboard();
+  logActivity('RESTOCK', `${p.name} → ${p.stock}`);
+}
+
+function deleteProduct(id) {
+  const p = products.find(x => x.id === id);
+  showConfirm(`Delete "${p.name}"? This cannot be undone.`, () => {
+    products = products.filter(x => x.id !== id);
+    renderManage();
+    renderProducts();
+    refreshDashboard();
+    toast('Product deleted', 'info');
+    logActivity('DELETE', p.name);
+  });
+}
+
+// ═══ Product Modal ═══
+function openAddModal() {
+  document.getElementById('modalTitle').textContent = 'Add New Product';
+  document.getElementById('editId').value = '';
+  ['pName','pDesc','pSku'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pPrice').value = '';
+  document.getElementById('pStock').value = '';
+  document.getElementById('pCategory').value = 'Electronics';
+  document.getElementById('productModal').classList.add('open');
+}
+function openEditModal(id) {
+  const p = products.find(x => x.id === id);
+  document.getElementById('modalTitle').textContent = 'Edit Product';
+  document.getElementById('editId').value = id;
+  document.getElementById('pName').value = p.name;
+  document.getElementById('pDesc').value = p.desc;
+  document.getElementById('pPrice').value = p.price;
+  document.getElementById('pStock').value = p.stock;
+  document.getElementById('pSku').value = p.sku;
+  document.getElementById('pCategory').value = p.category;
+  document.getElementById('productModal').classList.add('open');
+}
+function closeModal() { document.getElementById('productModal').classList.remove('open'); }
+function saveProduct() {
+  const name = document.getElementById('pName').value.trim();
+  const cat = document.getElementById('pCategory').value;
+  const desc = document.getElementById('pDesc').value.trim();
+  const price = parseFloat(document.getElementById('pPrice').value);
+  const stock = parseInt(document.getElementById('pStock').value);
+  const sku = document.getElementById('pSku').value.trim();
+  if (!name || !sku || isNaN(price) || isNaN(stock)) { toast('Please fill all required fields', 'error'); return; }
+  const editId = document.getElementById('editId').value;
+  if (editId) {
+    const p = products.find(x => x.id == editId);
+    Object.assign(p, { name, category:cat, desc, price, stock, sku });
+    logActivity('EDIT', name);
+    toast('Product updated!', 'success');
+  } else {
+    products.push({ id: ++nextId, name, category:cat, desc, price, stock, sku });
+    logActivity('ADD', name);
+    toast('Product added!', 'success');
+  }
+  closeModal();
+  renderManage();
+  renderProducts();
+  refreshDashboard();
+}
+
+// ═══ Confirm Modal ═══
+let confirmCb = null;
+function showConfirm(msg, cb) {
+  document.getElementById('confirmMsg').textContent = msg;
+  confirmCb = cb;
+  document.getElementById('confirmModal').classList.add('open');
+}
+function closeConfirm() { document.getElementById('confirmModal').classList.remove('open'); confirmCb = null; }
+document.getElementById('confirmBtn').onclick = () => { if(confirmCb) confirmCb(); closeConfirm(); };
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target === o){ o.classList.remove('open'); } }));
+
+// ═══ Toast ═══
+function toast(msg, type = 'info') {
+  const icons = { success:'✅', error:'❌', info:'ℹ️' };
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span class="t-ico">${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(40px)'; t.style.transition='all .3s'; setTimeout(()=>t.remove(),300); }, 3000);
+}
+
+// ═══ Init ═══
+setView('grid');
+</script>
+</body>
+</html>
